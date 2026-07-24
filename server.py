@@ -41,7 +41,7 @@ Instructions: {props.get("instruction", "No specific instructions provided")}
 
 
 @mcp.tool()
-async def get_alerts_mj(state: str) -> str:
+async def get_alerts(state: str) -> str:
     """Get weather alerts for a US state.
 
     Args:
