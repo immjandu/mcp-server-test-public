@@ -41,7 +41,7 @@ Instructions: {props.get("instruction", "No specific instructions provided")}
 
 
 @mcp.tool()
-async def get_alerts_1(state: str) -> str:
+async def get_alerts(state: str) -> str:
     """Get weather alerts for a US state.
 
     Args:
@@ -106,8 +106,8 @@ def main():
         asyncio.run(
             mcp.run_http_async(
                 transport="streamable-http",
-                #host="0.0.0.0",
-                #port=port,
+                host="0.0.0.0",
+                port=port,
                 allowed_hosts=["*.playmcp-endpoint.kakaocloud.io"]
             )
         )
