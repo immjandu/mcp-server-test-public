@@ -1,31 +1,19 @@
 import asyncio
 import logging
 import os
-import secrets
 from typing import Any
-
 import httpx
 from fastmcp import FastMCP
-from fastmcp.server.auth.providers.debug import DebugTokenVerifier
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="[%(levelname)s]: %(message)s", level=logging.INFO)
 
+# Initialize FastMCP server
+mcp = FastMCP("weather MCP Server on Kakaocloud")
+
 # Constants
 NWS_API_BASE = "https://api.weather.gov"
 USER_AGENT = "weather-app/1.0"
-
-
-def validate_api_token(token: str) -> bool:
-    """Validate Bearer token against MCP_API_TOKEN env var."""
-    expected = os.getenv("MCP_API_TOKEN")
-    if not expected:
-        return False
-    return secrets.compare_digest(token, expected)
-
-
-auth = DebugTokenVerifier(validate=validate_api_token, client_id="weather-mcp-client")
-mcp = FastMCP("weather MCP Server on Kakaocloud (authenticated)", auth=auth)
 
 
 async def make_nws_request(url: str) -> dict[str, Any] | None:
@@ -80,21 +68,24 @@ async def get_forecast(latitude: float, longitude: float) -> str:
         latitude: Latitude of the location
         longitude: Longitude of the location
     """
+    # First get the forecast grid endpoint
     points_url = f"{NWS_API_BASE}/points/{latitude},{longitude}"
     points_data = await make_nws_request(points_url)
 
     if not points_data:
         return "Unable to fetch forecast data for this location."
 
+    # Get the forecast URL from the points response
     forecast_url = points_data["properties"]["forecast"]
     forecast_data = await make_nws_request(forecast_url)
 
     if not forecast_data:
         return "Unable to fetch detailed forecast."
 
+    # Format the periods into a readable forecast
     periods = forecast_data["properties"]["periods"]
     forecasts = []
-    for period in periods[:5]:
+    for period in periods[:5]:  # Only show next 5 periods
         forecast = f"""
 {period["name"]}:
 Temperature: {period["temperature"]}°{period["temperatureUnit"]}
@@ -108,15 +99,10 @@ Forecast: {period["detailedForecast"]}
 
 def main():
     try:
-        if not os.getenv("MCP_API_TOKEN"):
-            raise ValueError(
-                "MCP_API_TOKEN environment variable must be set. "
-                "Clients must send Authorization: Bearer <token>."
-            )
-
         port = int(os.getenv("PORT", "8000"))
-        logger.info(f"Starting authenticated MCP server on port {port}")
+        logger.info(f"Starting MCP server on port {port}")
 
+        # Run the server
         asyncio.run(
             mcp.run_http_async(
                 transport="streamable-http",
