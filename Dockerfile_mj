@@ -1,0 +1,26 @@
+FROM python:3.14-slim
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+
+COPY pyproject.toml server.py /app/
+# uv.lock이 있으면 같이 복사하고 아래를 `uv sync --frozen --no-dev`로 바꾼다
+RUN uv sync --no-dev
+
+# 플랫폼은 UID 1000 비 root로 실행한다. 계정·홈을 만들고 /app 소유권을 넘긴다
+RUN useradd --uid 1000 --create-home mcp \
+    && chown -R 1000:1000 /app
+
+ENV HOME=/home/mcp \
+    UV_CACHE_DIR=/tmp/uv-cache \
+    PATH="/app/.venv/bin:$PATH" \
+    PORT=8000
+
+USER 1000
+EXPOSE 8000
+
+# uv run 대신 빌드 때 만든 venv의 python을 직접 띄운다
+CMD ["python", "server.py"]
+
